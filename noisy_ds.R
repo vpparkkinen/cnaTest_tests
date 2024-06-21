@@ -6,7 +6,7 @@ if(is.na(Sys.getenv("RSTUDIO", unset = NA))){
   setwd(dirname(path))
 }
 
-library(cnaOpt)
+#library(cnaOpt)
 library(cnasimtools)
 library(doParallel)
 library(ggplot2)
@@ -18,8 +18,8 @@ cores <- detectCores() - 2L
 options(mc.cores = cores)
 
 
-dsets <- replicate(300, 
-                   noisyDat(6, set_N = sample(c(20, 30, 40, 50), 1),
+dsets <- replicate(1000, 
+                   noisyDat(6, set_N = sample(c(20, 30, 40, 50, 70, 80), 1),
                             noisefraction = 0.2,
                             n.asf = 1L), 
                    simplify = F)
@@ -48,21 +48,36 @@ correct[nnull] <- mcmapply(\(x, y) any(is.submodel(x = x, y = y)),
                     x = modsc, y = targets[nnull],
                     SIMPLIFY = FALSE)
 
+# correct2 <- vector(length = length(dsets))
+# 
+# correct2 <- mapply(\(x, y) if(is.null(x)) TRUE else any(is.submodel(x = x$condition, y = y)),
+#                      x = mods, y = targets,
+#                      SIMPLIFY = FALSE)
+
 correct[!nnull] <- TRUE
 
-pv <- mcmapply(\(data, out) cnaTest(d = data, 
+pv_n <- mcmapply(\(data, out) cnaTest(d = data, 
                                     outcomes = out,
                                     aggregFn = min)$p_value,
                data = dsets, out = outcomes,
                SIMPLIFY = FALSE)
 
-pvals <- pv
+pvals_n <- pv_n
 
-res <- data.table(ffree = unlist(correct), pval = unlist(pvals), empty = !nnull)
+res_noise <- data.table(ffree = unlist(correct), pval = unlist(pvals_n), empty = !nnull)
 
-res[ffree == FALSE & pval <= 1, .N] / res[ffree == FALSE | empty == TRUE, .N] 
+saveRDS(res_noise, "20pnoise_1000sets.RDS")
 
-res[pval >= .95 & ffree==T, .N]
-hist(res[f_positive==T,pval], breaks = 100)
-
-
+# res_noise[ffree == T & pval >= 0.95, .N] 
+# 
+# res_noise[ffree == T, pval] |> hist(breaks=100)
+# 
+# 
+# res_noise[pval <= 1 & ffree==T, .N] / res_noise[pval <= 1, .N]
+# (res_noise[ffree == T & pval >= 0.95, .N] + res_noise[pval < 0.95, .N]) / 400
+# res_noise[pval > 0.05 & ffree == T & empty == F, .N]
+# allr <- rbind(res_noise, res_rand[, c("ffree", "pval", "empty")])
+# 
+# allr[ffree == TRUE & pval >= 0.95, .N] / allr[pval >= 0.95, .N]
+# 
+# allr[ffree == F, pval] |> hist()
