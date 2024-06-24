@@ -11,20 +11,20 @@ library(cnasimtools)
 library(doParallel)
 library(ggplot2)
 library(data.table)
-library(frscore)
+#library(frscore)
 source("cnaTest_V2.R")
 
 cores <- detectCores() - 2L
 options(mc.cores = cores)
 
 
-dsets_co <- replicate(100,
-                   noisyDat(6, set_N = sample(c(10, 20, 30), 1),
-                            noisefraction = 0.2,
+dsets_co <- replicate(1000,
+                   noisyDat(6, set_N = sample(c(30,40,70), 1),
+                            noisefraction = 0.1,
                             n.asf = 1L),
                    simplify = F)
 targets_co <- mclapply(dsets_co, \(x) attributes(x)$target)
-dsets_co <- lapply(dsets_co, \(x) cbind(x, list(U= rbinom(nrow(x), 1, 0.5))))
+# dsets_co <- lapply(dsets_co, \(x) cbind(x, list(U= rbinom(nrow(x), 1, 0.5))))
 
 grab_outcomes <- function(x){
   asfs <- unlist(strsplit(x, "\\)\\*\\("))
@@ -35,30 +35,32 @@ grab_outcomes <- function(x){
 
 outcomes_co <- lapply(targets_co, grab_outcomes)
 
-mods_co <- mcmapply(\(x,y,...) cnaOpt(x=x, outcome=y,...),
+mods_co <- mcmapply(\(x,y,...) try(cnaOpt(x=x, outcome=y,...)),
                  x = dsets_co,
                  y = outcomes_co,
                  MoreArgs = list(reduce = "rreduce"),
                  SIMPLIFY = F)
 
-mcmapply(\(x,y,...) cnaOpt(x=x, outcome=y,...),
-                 x = dsets_co[90:100],
-                 y = outcomes_co[90:100],
-                 MoreArgs = list(reduce = "rreduce"),
-                 SIMPLIFY = F)
+# mcmapply(\(x,y,...) cnaOpt(x=x, outcome=y,...),
+#                  x = dsets_co[90:100],
+#                  y = outcomes_co[90:100],
+#                  MoreArgs = list(reduce = "rreduce"),
+#                  SIMPLIFY = F)
 
-
-
-prob_set <- list(dsets_co[[97]])
-mcmapply(\(x,y,...) cnaOpt(x=x, outcome=y,...),
-                 x = prob_set,
-                 y = outcomes_co[[97]],
-                 MoreArgs = list(reduce = "rreduce"),
-                 SIMPLIFY = F)
-
-cnaOpt(dsets_co[[97]], outcome = outcomes_co[[97]], reduce = "rreduce")
 empty <- lapply(mods_co, \(x) is.null(x) | !is.data.frame(x))
 
-ffree <- mapply(\(x, y) if(is.null(x) || !is.data.frame(x)) {TRUE} else any(is.submodel(x = x$condition, y = y)),
+ffree <- mapply(\(x, y) if(is.null(x) || !is.data.frame(x)) {TRUE} else {any(is.submodel(x = x$condition, y = y))},
                      x = mods_co, y = targets_co,
                      SIMPLIFY = FALSE)
+
+pv_co <- mcmapply(\(data, out) cnaTest(d = data,
+                                    outcomes = out,
+                                    aggregFn = min)$p_value,
+               data = dsets_co, out = outcomes_co,
+               SIMPLIFY = FALSE)
+
+res_co <- data.table(ffree = unlist(ffree), pval = unlist(pv_co), empy = unlist(empty))
+res_co[ffree == T, .N]
+res_co[ffree == T & pval > 0.05, .N]
+
+hist(res_co[, pval])
