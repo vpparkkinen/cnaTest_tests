@@ -61,6 +61,6 @@ pv_co <- mcmapply(\(data, out) cnaTest(d = data,
 
 res_co <- data.table(ffree = unlist(ffree), pval = unlist(pv_co), empy = unlist(empty))
 res_co[ffree == T, .N]
-res_co[ffree == T & pval > 0.05, .N]
+res_co[ffree == T & pval < 0.05, .N] / res_co[pval < 0.05, .N]
 
-hist(res_co[, pval])
+hist(res_co[ffree == F, pval])
