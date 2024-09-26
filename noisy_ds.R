@@ -66,7 +66,12 @@ pvals_n <- pv_n
 
 res_noise <- data.table(ffree = unlist(correct), pval = unlist(pvals_n), empty = !nnull)
 
+
+
 saveRDS(res_noise, "20pnoise_1000sets.RDS")
+
+
+res_noise[ffree==T & empty == F, .N] / 400
 
 # res_noise[ffree == T & pval >= 0.95, .N] 
 # 
