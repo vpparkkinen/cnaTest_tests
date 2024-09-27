@@ -16,15 +16,20 @@ source("cnaTest_V2.R")
 
 cores <- detectCores() - 2L
 options(mc.cores = cores)
+n_dss <- 1000
+n_facs <- 6
 
+force_N_randomAsf <- function(x, ...){
+  check <- FALSE
+  while (isFALSE(check)) {
+    mod <- do.call(cna::randomAsf, c(list(x=x), list(...)))
+    check <- cnasimtools:::check_modliterals(mod = mod, x = x)
+  }
+  return(mod)
+}
 
-dsets <- replicate(1000,
-                   noisyDat(6, set_N = sample(c(10, 20, 30), 1),
-                            noisefraction = 0.3,
-                            n.asf = 1L),
-                   simplify = F)
-targets <- mclapply(dsets, \(x) attributes(x)$target)
-dsets <- lapply(dsets, \(x) cbind(x, list(U= rbinom(nrow(x), 1, 0.5))))
+targets <- replicate(n_dss, force_N_randomAsf(n_facs), simplify = FALSE)
+dsets <- lapply(targets, \(x) ct2df(selectCases(x)))
 
 grab_outcomes <- function(x){
   asfs <- unlist(strsplit(x, "\\)\\*\\("))
@@ -35,6 +40,19 @@ grab_outcomes <- function(x){
 
 outcomes <- lapply(targets, grab_outcomes)
 
+dsets <- mapply(prevalence_compliant_noisify,
+                model = targets, data = dsets, outcome = outcomes,
+                MoreArgs = list(noiselevel = 0.125), SIMPLIFY = FALSE)
+## are things working?
+#mapply(\(x, y) nrow(ct2df(selectCases(x, y))), targets, dsets) |> unique()
+
+# dsets <- replicate(1000,
+#                    noisyDat(6, set_N = 32,
+#                             noisefraction = 0.125,
+#                             n.asf = 1L,
+#                             add = FALSE),
+#                    simplify = F)
+# dsets <- lapply(dsets, \(x) cbind(x, list(U= rbinom(nrow(x), 1, 0.5))))
 
 mods <- mcmapply(\(x,y,...) frscored_cna(x=x, outcome=y, ...),
                  x = dsets,
@@ -70,7 +88,7 @@ res_noise <- data.table(ffree = unlist(correct), pval = unlist(pv_n), empty = !n
 
 
 
-saveRDS(res_noise, "20pnoise_1000sets.RDS")
+#saveRDS(res_noise, "20pnoise_1000sets.RDS")
 
 
 
