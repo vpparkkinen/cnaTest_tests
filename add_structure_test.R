@@ -75,8 +75,8 @@ for(i in seq_along(res)){
                                     aggregFn = min)$p_value)
 }
 
-saveRDS(res, "results/increment_structure_pvals.RDS")
-saveRDS(noisy_and_clean, "results/increment_structure_datasets.RDS")
+#saveRDS(res, "results/increment_structure_pvals.RDS")
+#saveRDS(noisy_and_clean, "results/increment_structure_datasets.RDS")
 
 ## Additional check that everything is working so far
 # cccheck <- vector("list", length(res))
@@ -92,6 +92,7 @@ base_all <- unlist(base_noise_pvals)
 comb_all <- cbind(base_all, as.data.frame(res_all)) 
 levels <- seq(from = 0, to = N, by = clean_increment)
 colnames(comb_all) <- levels
+saveRDS(comb_all, "results/pvals_df_wide.RDS")
 comb_all <- pivot_longer(comb_all, names(comb_all))
 comb_all$name <- factor(comb_all$name, levels = levels) # just for ordering
                                                         # the plots
@@ -110,6 +111,7 @@ ggsave("results/pval_plot.pdf")
 ##### frscored_cna() over the sets of data sets
 
 alldats <- c(list(base_noise_dats), noisy_and_clean)
+saveRDS(alldats, "results/increment_structure_datasets.RDS")
 
 fr_tempres <- vector("list", length(alldats))
 
@@ -137,16 +139,17 @@ fr_cor <- lapply(fr_topq, \(x) checkcorrect(x, tars))
 fr_cor <- lapply(fr_cor, unlist)
 
 fr_res_cor <- lapply(fr_cor, \(x) sum(x, na.rm = T) / num_of_datasets)
-
+saveRDS(fr_res_cor, "results/fr_cor_all.RDS")
 fr_res_false_pos <- lapply(fr_cor, \(x) sum(!x, na.rm = T) / num_of_datasets)
-
+saveRDS(fr_res_false_pos, "results/fr_fp_all.RDS")
 fr_cor_df <- data.frame(fr_res_cor)
 colnames(fr_cor_df) <- levels
 
-saveRDS(fr_cor_df, "results/fr_cor_df.RDS")
+saveRDS(fr_cor_df, "results/fr_cor_means.RDS")
 
 fr_res_FP_df <- data.frame(fr_res_false_pos)
 colnames(fr_res_FP_df) <- levels
+saveRDS(fr_res_FP_df, "results/fr_FP_means.RDS")
 
-saveRDS(fr_res_FP_df, "results/fr_res_FP_df.RDS")
+
 
