@@ -6,7 +6,7 @@ if(is.na(Sys.getenv("RSTUDIO", unset = NA))){
   setwd(dirname(path))
 }
 library(data.table)
-
+library(ggplot2)
 
 fr_cor <- readRDS("fr_cor_means.RDS")
 fr_cor_long <- melt(data.table(fr_cor), measure.vars = names(fr_cor))
