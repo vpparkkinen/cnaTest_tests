@@ -14,8 +14,8 @@ library(cnasimtools)
 library(doParallel)
 library(tidyr)
 library(ggplot2)
-#library(data.table)
-#library(frscore)
+library(data.table)
+library(frscore)
 source("cnaTest_V2.R")
 
 cores <- detectCores() - 2L
@@ -24,7 +24,7 @@ options(mc.cores = cores)
 ## setup
 nfac <- 6 # how many factors in data sets
 num_of_datasets <- 1000 # how many data sets
-N = 32 # sample size
+N = 64 # sample size
 outcome = "A" #outcome
 
 # create data sets of pure noise
@@ -92,18 +92,17 @@ base_all <- unlist(base_noise_pvals)
 comb_all <- cbind(base_all, as.data.frame(res_all)) 
 levels <- seq(from = 0, to = N, by = clean_increment)
 colnames(comb_all) <- levels
-saveRDS(comb_all, "results/pvals_df_wide.RDS")
 comb_all <- pivot_longer(comb_all, names(comb_all))
 comb_all$name <- factor(comb_all$name, levels = levels) # just for ordering
                                                         # the plots
 
 # plot p-value distributions per amount of structure in the data sets
-pval_plot <- ggplot(comb_all, aes(value)) +
-  geom_histogram(bins = 200) +
-  facet_wrap(~name)
-
-#pval_plot
-ggsave("results/pval_plot.pdf")
+# pval_plot <- ggplot(comb_all, aes(value)) +
+#   geom_histogram(bins = 200) +
+#   facet_wrap(~name)
+# 
+# #pval_plot
+# ggsave("results/pval_plot.pdf")
 
 #comb_all |> filter(name == 28 & value <= 0.05) |> nrow() 
 
@@ -111,7 +110,6 @@ ggsave("results/pval_plot.pdf")
 ##### frscored_cna() over the sets of data sets
 
 alldats <- c(list(base_noise_dats), noisy_and_clean)
-saveRDS(alldats, "results/increment_structure_datasets.RDS")
 
 fr_tempres <- vector("list", length(alldats))
 
@@ -139,17 +137,21 @@ fr_cor <- lapply(fr_topq, \(x) checkcorrect(x, tars))
 fr_cor <- lapply(fr_cor, unlist)
 
 fr_res_cor <- lapply(fr_cor, \(x) sum(x, na.rm = T) / num_of_datasets)
-saveRDS(fr_res_cor, "results/fr_cor_all.RDS")
 fr_res_false_pos <- lapply(fr_cor, \(x) sum(!x, na.rm = T) / num_of_datasets)
-saveRDS(fr_res_false_pos, "results/fr_fp_all.RDS")
 fr_cor_df <- data.frame(fr_res_cor)
 colnames(fr_cor_df) <- levels
 
-saveRDS(fr_cor_df, "results/fr_cor_means.RDS")
 
 fr_res_FP_df <- data.frame(fr_res_false_pos)
 colnames(fr_res_FP_df) <- levels
-saveRDS(fr_res_FP_df, "results/fr_FP_means.RDS")
+
+td <- format(Sys.time(), "%b%e_%Hh%Mm")
+saveRDS(comb_all, paste0("results/pvals_df_", td, ".RDS"))
+saveRDS(fr_res_cor, paste0("results/fr_cor_all_", td, ".RDS"))
+saveRDS(fr_res_false_pos, paste0("results/fr_fp_all_", td, ".RDS"))
+saveRDS(fr_cor_df, paste0("results/fr_cor_means_", td, ".RDS"))
+saveRDS(fr_res_FP_df, paste0("results/fr_FP_means_", td, ".RDS"))
+saveRDS(alldats, paste0("results/inc_structure_datasets_", td, ".RDS"))
 
 
 
