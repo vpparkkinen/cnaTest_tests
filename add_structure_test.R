@@ -23,8 +23,8 @@ options(mc.cores = cores)
 
 ## setup
 nfac <- 6 # how many factors in data sets
-num_of_datasets <- 1000 # how many data sets
-N = 64 # sample size
+num_of_datasets <- 2 # how many data sets
+N = 32 # sample size
 outcome = "A" #outcome
 
 # create data sets of pure noise
@@ -105,8 +105,10 @@ base_all <- unlist(base_noise_pvals)
 comb_all <- cbind(base_all, as.data.frame(res_all)) 
 levels <- seq(from = 0, to = N, by = clean_increment)
 colnames(comb_all) <- levels
-comb_all <- pivot_longer(comb_all, names(comb_all))
-comb_all$name <- factor(comb_all$name, levels = levels) # just for ordering
+
+## no need to create the plot here
+# comb_all <- pivot_longer(comb_all, names(comb_all))
+# comb_all$name <- factor(comb_all$name, levels = levels) # just for ordering
                                                         # the plots
 
 # plot p-value distributions per amount of structure in the data sets
@@ -116,8 +118,6 @@ comb_all$name <- factor(comb_all$name, levels = levels) # just for ordering
 # 
 # #pval_plot
 # ggsave("results/pval_plot.pdf")
-
-#comb_all |> filter(name == 28 & value <= 0.05) |> nrow() 
 
 
 ##### frscored_cna() over the sets of data sets
