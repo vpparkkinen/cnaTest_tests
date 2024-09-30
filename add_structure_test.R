@@ -38,14 +38,26 @@ base_noise_pvals <- mclapply(base_noise_dats,
 
 # create data sets that conform to a particular target,
 # to be used for injecting structure into pure noise
-cleandats <- replicate(length(base_noise_dats), randomDat(nfac, 
-                                                condtype = "asf",
-                                                outcome = outcome),
-                       simplify = FALSE)
+# cleandats <- replicate(length(base_noise_dats), randomDat(nfac, 
+#                                                 condtype = "asf",
+#                                                 outcome = outcome),
+#                        simplify = FALSE)
+#tars <- lapply(cleandats, \(x) attributes(x)$target)
 
-# targets for the clean data, not really needed except for checking
-# that things worked as intended
-tars <- lapply(cleandats, \(x) attributes(x)$target)
+force_c_randomAsf <- function(x, ...){
+  check <- FALSE
+  while (isFALSE(check)) {
+    mod <- do.call(cna::randomAsf, c(list(x=x), list(...)))
+    check <- cnasimtools:::check_modliterals(mod = mod, x = x)
+  }
+  return(mod)
+}
+
+tars <- replicate(length(base_noise_dats), 
+                         force_c_randomAsf(nfac, outcome = outcome),
+                         simplify = FALSE)
+
+cleandats <- mclapply(tars, \(x) ct2df(selectCases(x)))
 
 ## additional check that all worked so far, i.e. that the clean data
 ## do in fact perfectly conform to some or other target structure
@@ -66,7 +78,8 @@ noisy_and_clean <- vector("list", length(res))
 # calculate p-values
 for(i in seq_along(res)){
   noisy_remove_idx <- sample(1:N, clean_increment * i)
-  clean_to_add <- lapply(cleandats, \(x) x[sample(1:N, clean_increment * i), ])
+  clean_to_add <- lapply(cleandats, 
+                         \(x) x[sample(1:N, clean_increment * i, replace = T), ])
   noise <- lapply(base_noise_dats, \(x) x[-noisy_remove_idx, ]) 
   noisy_and_clean[[i]] <- mapply(rbind, noise, clean_to_add, SIMPLIFY = FALSE) 
   res[[i]] <- mclapply(noisy_and_clean[[i]],
