@@ -10,7 +10,7 @@ if(!require(cnasimtools)){
   remotes::install_github("vpparkkinen/cnasimtools")
 }
 
-library(cnasimtools) 
+library(cnasimtools)
 library(doParallel)
 library(tidyr)
 library(ggplot2)
@@ -31,14 +31,14 @@ outcome = "A" #outcome
 base_noise_dats <- bs_dat_create(Nsets = num_of_datasets, N = N, varnum = nfac)
 
 # calculate p-vals for pure noise data sets
-base_noise_pvals <- mclapply(base_noise_dats, 
-                           \(x) cnaTest(x, 
+base_noise_pvals <- mclapply(base_noise_dats,
+                           \(x) cnaTest(x,
                                         outcomes = outcome,
                                         aggregFn = min)$p_value)
 
 # create data sets that conform to a particular target,
 # to be used for injecting structure into pure noise
-# cleandats <- replicate(length(base_noise_dats), randomDat(nfac, 
+# cleandats <- replicate(length(base_noise_dats), randomDat(nfac,
 #                                                 condtype = "asf",
 #                                                 outcome = outcome),
 #                        simplify = FALSE)
@@ -53,7 +53,7 @@ force_c_randomAsf <- function(x, ...){
   return(mod)
 }
 
-tars <- replicate(length(base_noise_dats), 
+tars <- replicate(length(base_noise_dats),
                          force_c_randomAsf(nfac, outcome = outcome),
                          simplify = FALSE)
 
@@ -78,10 +78,10 @@ noisy_and_clean <- vector("list", length(res))
 # calculate p-values
 for(i in seq_along(res)){
   noisy_remove_idx <- sample(1:N, clean_increment * i)
-  clean_to_add <- lapply(cleandats, 
-                         \(x) x[sample(1:N, clean_increment * i, replace = T), ])
-  noise <- lapply(base_noise_dats, \(x) x[-noisy_remove_idx, ]) 
-  noisy_and_clean[[i]] <- mapply(rbind, noise, clean_to_add, SIMPLIFY = FALSE) 
+  clean_to_add <- lapply(cleandats,
+                         \(x) x[sample(1:nrow(x), clean_increment * i, replace = T), ])
+  noise <- lapply(base_noise_dats, \(x) x[-noisy_remove_idx, ])
+  noisy_and_clean[[i]] <- mapply(rbind, noise, clean_to_add, SIMPLIFY = FALSE)
   res[[i]] <- mclapply(noisy_and_clean[[i]],
                        \(x) cnaTest(x,
                                     outcomes = outcome,
@@ -102,7 +102,7 @@ for(i in seq_along(res)){
 # store the p-values, including ones for pure noise, in a data frame, and plot
 res_all <- lapply(res, unlist)
 base_all <- unlist(base_noise_pvals)
-comb_all <- cbind(base_all, as.data.frame(res_all)) 
+comb_all <- cbind(base_all, as.data.frame(res_all))
 levels <- seq(from = 0, to = N, by = clean_increment)
 colnames(comb_all) <- levels
 
@@ -115,7 +115,7 @@ colnames(comb_all) <- levels
 # pval_plot <- ggplot(comb_all, aes(value)) +
 #   geom_histogram(bins = 200) +
 #   facet_wrap(~name)
-# 
+#
 # #pval_plot
 # ggsave("results/pval_plot.pdf")
 
@@ -165,6 +165,3 @@ saveRDS(fr_res_false_pos, paste0("results/fr_fp_all_", td, ".RDS"))
 saveRDS(fr_cor_df, paste0("results/fr_cor_means_", td, ".RDS"))
 saveRDS(fr_res_FP_df, paste0("results/fr_FP_means_", td, ".RDS"))
 saveRDS(alldats, paste0("results/inc_structure_datasets_", td, ".RDS"))
-
-
-
