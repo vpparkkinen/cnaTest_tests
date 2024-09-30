@@ -23,8 +23,8 @@ options(mc.cores = cores)
 
 ## setup
 nfac <- 6 # how many factors in data sets
-num_of_datasets <- 2 # how many data sets
-N = 32 # sample size
+num_of_datasets <- 1000 # how many data sets
+N = 64 # sample size
 outcome = "A" #outcome
 
 # create data sets of pure noise
