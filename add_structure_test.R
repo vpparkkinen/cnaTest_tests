@@ -44,6 +44,9 @@ base_noise_pvals <- mclapply(base_noise_dats,
 #                        simplify = FALSE)
 #tars <- lapply(cleandats, \(x) attributes(x)$target)
 
+# A wrapper of randomAsf() that forces the outputted model
+# to have exactly `x` factors, where `x` is an integer.
+# Only works for creating binary (cs) models.
 force_c_randomAsf <- function(x, ...){
   check <- FALSE
   while (isFALSE(check)) {
@@ -53,22 +56,24 @@ force_c_randomAsf <- function(x, ...){
   return(mod)
 }
 
+# create targets
 tars <- replicate(length(base_noise_dats),
                          force_c_randomAsf(nfac, outcome = outcome),
                          simplify = FALSE)
 
+# create clean data sets
 cleandats <- mclapply(tars, \(x) ct2df(selectCases(x)))
 
-## additional check that all worked so far, i.e. that the clean data
-## do in fact perfectly conform to some or other target structure
+## additional check that everything worked so far, i.e. that the clean data
+## do in fact perfectly conform to the target structure
 # co <- mapply(\(x, y) condition(x, y), tars, cleandats, SIMPLIFY = FALSE)
 # co <- lapply(co, \(x) attributes(x)$info[,c("consistency", "coverage")])
-# co <- do.call(rbind, co)
+# co <- rbindlist(co)
 ## now check colSums or something to make sure all con/cov are one
 
 
 clean_increment <- 4 # incrementally add this many rows of structure
-inc_nrow_factor <- N / clean_increment
+inc_nrow_factor <- N / clean_increment # how many noise conditions we get
 
 res <- vector("list", inc_nrow_factor)
 noisy_and_clean <- vector("list", length(res))
@@ -88,9 +93,6 @@ for(i in seq_along(res)){
                                     aggregFn = min)$p_value)
 }
 
-#saveRDS(res, "results/increment_structure_pvals.RDS")
-#saveRDS(noisy_and_clean, "results/increment_structure_datasets.RDS")
-
 ## Additional check that everything is working so far
 # cccheck <- vector("list", length(res))
 # for(i in seq_along(res)){
@@ -98,8 +100,9 @@ for(i in seq_along(res)){
 #                                             tars, noisy_and_clean[[i]],
 #                                             SIMPLIFY = FALSE)
 # }
+# con/cov of targets to data sets should increase
 
-# store the p-values, including ones for pure noise, in a data frame, and plot
+
 res_all <- lapply(res, unlist)
 base_all <- unlist(base_noise_pvals)
 comb_all <- cbind(base_all, as.data.frame(res_all))
@@ -131,6 +134,7 @@ for(i in seq_along(alldats)){
                             \(x) frscored_cna(x, outcome = outcome))
 }
 
+# get top percentile models from the analyses
 gettopq <- function(mods, tquant){
   lapply(mods, function(y) if (!is.null(y)){
     y[[1]][y[[1]]$score >= quantile(y[[1]]$score, tquant, na.rm = T),]})
@@ -138,7 +142,7 @@ gettopq <- function(mods, tquant){
 
 fr_topq <- lapply(fr_tempres, \(x) gettopq(x, 0.98))
 
-
+# check correctness, code empty output as NA
 checkcorrect <- function(mods, tars){
   mapply(\(x, y) if(is.null(x)) NA else any(is.submodel(x = x$condition, y = y)),
          x = mods, y = tars,
@@ -149,6 +153,7 @@ fr_cor <- lapply(fr_topq, \(x) checkcorrect(x, tars))
 
 fr_cor <- lapply(fr_cor, unlist)
 
+# calculate correctness and false positive rates
 fr_res_cor <- lapply(fr_cor, \(x) sum(x, na.rm = T) / num_of_datasets)
 fr_res_false_pos <- lapply(fr_cor, \(x) sum(!x, na.rm = T) / num_of_datasets)
 fr_cor_df <- data.frame(fr_res_cor)
@@ -158,6 +163,7 @@ colnames(fr_cor_df) <- levels
 fr_res_FP_df <- data.frame(fr_res_false_pos)
 colnames(fr_res_FP_df) <- levels
 
+# save stuff
 td <- format(Sys.time(), "%b%e_%Hh%Mm")
 saveRDS(comb_all, paste0("results/pvals_df_", td, ".RDS"))
 saveRDS(fr_res_cor, paste0("results/fr_cor_all_", td, ".RDS"))
